@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "none",
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
+    "baseUrl": ".",
+    "target": "ESNext",
+    "sourceMap": true,
+    "rootDir": ".",
+    "outFile": "./script.js"
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}

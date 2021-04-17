@@ -1,5 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Index" type="JavascriptDebugType" uri="http://localhost:63342/Webruly/index.html" useFirstLineBreakpoints="true" useBuiltInWebServerPort="true">
-    <method v="2" />
+    <method v="2">
+      <option name="TypeScript.Before.Run" enabled="true" FAIL_ON_ERROR="true" CONFIG_PATH="$PROJECT_DIR$/tsconfig.json" />
+    </method>
   </configuration>
 </component>
