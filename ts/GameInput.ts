@@ -32,7 +32,6 @@ class GameInput {
     }
 
     onKeyPress(e: KeyboardEvent) {
-        console.log(1)
         if (!e.repeat) {
             switch (e.key) {
                 case "g":

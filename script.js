@@ -102,7 +102,6 @@ class GameInput {
         this.#game.setCellState(move);
     }
     onKeyPress(e) {
-        console.log(1);
         if (!e.repeat) {
             switch (e.key) {
                 case "g":
@@ -216,73 +215,77 @@ class GameRenderer {
         return this.#game;
     }
 }
-// noinspection DuplicatedCode
+// noinspection JSSuspiciousNameCombination
 class GameSolver {
     #game;
     #moves;
-    #colData;
-    #rowData;
-    initRowAndColData() {
-        this.#colData = [];
-        this.#rowData = [];
-        for (let x = 0; x < this.width; x++) {
-            this.#colData[x] = { PRIMARY: 0, SECONDARY: 0 };
-        }
-        for (let y = 0; y < this.height; y++) {
-            this.#rowData[y] = { PRIMARY: 0, SECONDARY: 0 };
-            for (let x = 0; x < this.width; x++) {
-                switch (this.#game.getCellState({ x: x, y: y })) {
-                    case CellState.PRIMARY:
-                        this.#rowData[y].PRIMARY++;
-                        this.#colData[x].PRIMARY++;
-                        break;
-                    case CellState.SECONDARY:
-                        this.#rowData[y].SECONDARY++;
-                        this.#colData[x].SECONDARY++;
-                }
-            }
-        }
-    }
     solveFull() {
-        this.initRowAndColData();
     }
     oaoSingle() {
-        for (let y = 0; y < this.height; y++) {
-            let row = this.#rowData[y];
-            if (row.PRIMARY + row.SECONDARY == this.width - 1) {
-                let emptyX = -1;
-                for (let x = 0; x < this.width; x++) {
-                    if (this.#game.getCellState({ x: x, y: y }) == CellState.EMPTY) {
-                        emptyX = x;
-                        break;
+        function half(getCS, width, height) {
+            for (let y = 0; y < height; y++) {
+                let emptyIdx = -1;
+                let prim = 0;
+                let states = [];
+                for (let x = 0; x < width; x++) {
+                    let cs = getCS({ x: x, y: y });
+                    states[0] = states[1];
+                    states[1] = states[2];
+                    states[2] = cs;
+                    if (cs == CellState.EMPTY) {
+                        if (emptyIdx == -1) {
+                            emptyIdx = x;
+                        }
+                        else if (emptyIdx >= 0) {
+                            emptyIdx = undefined;
+                        }
+                    }
+                    if (cs == CellState.PRIMARY)
+                        prim++;
+                    if (x >= 2) {
+                        for (let i = 0; i < 3; i++) {
+                            if (states[i] == CellState.EMPTY &&
+                                states[(i + 1) % 3] != CellState.EMPTY &&
+                                states[(i + 1) % 3] == states[(i + 2) % 3]) {
+                                return {
+                                    x: x - (2 - i),
+                                    y: y,
+                                    state: states[(i + 1) % 3] == CellState.PRIMARY ? CellState.SECONDARY : CellState.PRIMARY
+                                };
+                            }
+                        }
                     }
                 }
-                if (row.PRIMARY == this.width / 2) {
-                    return { x: emptyX, y: y, state: CellState.SECONDARY };
-                }
-                else {
-                    return { x: emptyX, y: y, state: CellState.PRIMARY };
-                }
-            }
-        }
-        for (let x = 0; x < this.width; x++) {
-            let col = this.#colData[x];
-            if (col.PRIMARY + col.SECONDARY == this.height - 1) {
-                let emptyY = -1;
-                for (let y = 0; y < this.height; y++) {
-                    if (this.#game.getCellState({ x: x, y: y }) == CellState.EMPTY) {
-                        emptyY = y;
-                        break;
-                    }
-                }
-                if (col.PRIMARY == this.height / 2) {
-                    return { x: x, y: emptyY, state: CellState.SECONDARY };
-                }
-                else {
-                    return { x: x, y: emptyY, state: CellState.PRIMARY };
+                if (emptyIdx >= 0) {
+                    return {
+                        x: emptyIdx,
+                        y: y,
+                        state: prim == width / 2 ? CellState.SECONDARY : CellState.PRIMARY
+                    };
                 }
             }
+            return null;
         }
+        // Two haves make a ~~pain in my ass~~hole
+        let h = half(this.getCellState.bind(this), this.width, this.height);
+        if (h)
+            return h;
+        return this.transpose(half(this.getTransposedCellState.bind(this), this.height, this.width));
+    }
+    getCellState(point) {
+        return this.#game.getCellState(point);
+    }
+    getTransposedCellState(point) {
+        return this.getCellState({ x: point.y, y: point.x });
+    }
+    //Be careful with this, I'm pretty sure it actually changes the parameter.
+    transpose(point) {
+        if (point === null)
+            return null;
+        let x = point.x;
+        point.x = point.y;
+        point.y = x;
+        return point;
     }
     makeMove(move) {
         this.#moves.push(move);
@@ -307,7 +310,6 @@ let game;
 // noinspection JSUnusedGlobalSymbols
 function setup() {
     game = new Game(8, 8);
-    game.setCellState({ x: 3, y: 3, state: CellState.PRIMARY });
     gameInput = new GameInput("mainCanvas");
     gameInput.game = game;
     gameRenderer = new GameRenderer("mainCanvas");

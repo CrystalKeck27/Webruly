@@ -5,7 +5,6 @@ let game: Game;
 // noinspection JSUnusedGlobalSymbols
 function setup() {
     game = new Game(8, 8);
-    game.setCellState({x:3, y:3, state: CellState.PRIMARY});
 
     gameInput = new GameInput("mainCanvas");
     gameInput.game = game;
