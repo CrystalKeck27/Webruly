@@ -38,7 +38,6 @@ class GameInput {
                     let gameSolver = new GameSolver();
                     gameSolver.game = this.#game;
                     gameSolver.solveFull();
-                    console.log(gameSolver.oaoSingle());
             }
         }
     }
