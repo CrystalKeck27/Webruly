@@ -107,6 +107,7 @@ class GameInput {
                 case "g":
                     let gameSolver = new GameSolver();
                     gameSolver.game = this.#game;
+                    gameSolver.allowDuplicateRows = false;
                     gameSolver.solveFull();
             }
         }
@@ -327,13 +328,23 @@ class GameSolver {
         return this.transpose(half(this.getTransposedCellState.bind(this), this.height, this.width));
     }
     hasError() {
+        let self = this;
         function half(getCS, width, height) {
             for (let y = 0; y < height; y++) {
                 let prim = 0;
                 let sec = 0;
                 let states = [];
+                let isGood = false;
                 for (let x = 0; x < width; x++) {
                     let cs = getCS({ x: x, y: y });
+                    if (!self.allowDuplicateRows) {
+                        for (let y2 = y + 1; y2 < height; y2++) {
+                            let cs2 = getCS({ x: x, y: y2 });
+                            if (cs2 != cs || cs == CellState.EMPTY) {
+                                isGood = true;
+                            }
+                        }
+                    }
                     states[x % 3] = cs;
                     if (cs == CellState.PRIMARY)
                         prim++;
@@ -346,6 +357,9 @@ class GameSolver {
                             return true;
                         }
                     }
+                }
+                if (!isGood && !self.allowDuplicateRows) {
+                    return true;
                 }
                 if (prim > width / 2) {
                     return true;

@@ -37,6 +37,7 @@ class GameInput {
                 case "g":
                     let gameSolver = new GameSolver();
                     gameSolver.game = this.#game;
+                    gameSolver.allowDuplicateRows = false;
                     gameSolver.solveFull();
             }
         }

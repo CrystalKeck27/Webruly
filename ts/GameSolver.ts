@@ -7,6 +7,7 @@ interface SolverMove extends Move {
 class GameSolver {
     #game: Game;
     #moves: SolverMove[];
+    allowDuplicateRows: boolean;
 
     fillGivens() {
         for (let y = 0; y < this.height; y++) {
@@ -114,6 +115,7 @@ class GameSolver {
     }
 
     hasError(): boolean {
+        let self = this;
         function half(getCS: (Vector) => CellState, width: number, height: number): boolean {
             for (let y = 0; y < height; y++) {
                 let prim = 0;
@@ -121,6 +123,13 @@ class GameSolver {
                 let states: CellState[] = [];
                 for (let x = 0; x < width; x++) {
                     let cs = getCS({x: x, y: y});
+                    if(!self.allowDuplicateRows) {
+                        for (let y2 = y + 1; y2 < height; y2++) {
+                            let cs2 = getCS({x:x, y:y2})
+                            if(cs2 != cs || cs == CellState.EMPTY) {
+                            }
+                        }
+                    }
                     states[x % 3] = cs;
                     if (cs == CellState.PRIMARY) prim++;
                     if (cs == CellState.SECONDARY) sec++;
