@@ -55,8 +55,8 @@ class Game extends EventEmitter {
     #width;
     #height;
     #board;
-    setCellState(point, state) {
-        this.#board[point.y][point.x] = state;
+    setCellState(move) {
+        this.#board[move.y][move.x] = move.state;
         this.emit("boardStateChange");
     }
     getCellState(point) {
@@ -75,6 +75,63 @@ var CellState;
     CellState[CellState["PRIMARY"] = 1] = "PRIMARY";
     CellState[CellState["SECONDARY"] = 2] = "SECONDARY";
 })(CellState || (CellState = {}));
+class GameInput {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.canvas.addEventListener("click", this.onPrimary.bind(this));
+        this.canvas.addEventListener("contextmenu", this.onCtxMenu.bind(this));
+        document.addEventListener("keydown", this.onKeyPress.bind(this));
+    }
+    #game;
+    onPrimary(e) {
+        this.onClick(e, 1);
+    }
+    onCtxMenu(e) {
+        e.preventDefault();
+        this.onClick(e, 2);
+        return false;
+    }
+    onClick(e, offset) {
+        let point = this.cellAt(e.offsetX, e.offsetY);
+        let newState = (game.getCellState(point) + offset) % 3;
+        let move = {
+            x: point.x,
+            y: point.y,
+            state: newState
+        };
+        this.#game.setCellState(move);
+    }
+    onKeyPress(e) {
+        console.log(1);
+        if (!e.repeat) {
+            switch (e.key) {
+                case "g":
+                    let gameSolver = new GameSolver();
+                    gameSolver.game = this.#game;
+                    gameSolver.solveFull();
+                    console.log(gameSolver.oaoSingle());
+            }
+        }
+    }
+    get width() {
+        return this.canvas.width;
+    }
+    get height() {
+        return this.canvas.height;
+    }
+    set game(game) {
+        this.#game = game;
+    }
+    get game() {
+        return this.#game;
+    }
+    cellAt(x, y) {
+        return {
+            x: Math.floor((x * this.#game.width) / this.width),
+            y: Math.floor((y * this.#game.height) / this.height)
+        };
+    }
+}
 class GameRenderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -159,43 +216,77 @@ class GameRenderer {
         return this.#game;
     }
 }
-const Themes = {
-    default: {
-        background: "#A0A0A0",
-        gridlines: "#000000",
-        primary: "#F0F0F0",
-        secondary: "#303030"
-    }
-};
-let gameRenderer;
-let gameInput;
-let game;
-// noinspection JSUnusedGlobalSymbols
-function setup() {
-    game = new Game(8, 8);
-    game.setCellState({ x: 3, y: 3 }, CellState.PRIMARY);
-    gameInput = new GameInput("mainCanvas");
-    gameInput.game = game;
-    gameRenderer = new GameRenderer("mainCanvas");
-    gameRenderer.game = game;
-    gameRenderer.render();
-}
-class GameInput {
-    constructor(canvasId) {
-        this.canvas = document.getElementById(canvasId);
-        this.canvas.addEventListener("click", this.onCLick.bind(this));
-    }
+// noinspection DuplicatedCode
+class GameSolver {
     #game;
-    onCLick(e) {
-        let point = this.cellAt(e.offsetX, e.offsetY);
-        let newState = (game.getCellState(point) + 1) % 3;
-        game.setCellState(point, newState);
+    #moves;
+    #colData;
+    #rowData;
+    initRowAndColData() {
+        this.#colData = [];
+        this.#rowData = [];
+        for (let x = 0; x < this.width; x++) {
+            this.#colData[x] = { PRIMARY: 0, SECONDARY: 0 };
+        }
+        for (let y = 0; y < this.height; y++) {
+            this.#rowData[y] = { PRIMARY: 0, SECONDARY: 0 };
+            for (let x = 0; x < this.width; x++) {
+                switch (this.#game.getCellState({ x: x, y: y })) {
+                    case CellState.PRIMARY:
+                        this.#rowData[y].PRIMARY++;
+                        this.#colData[x].PRIMARY++;
+                        break;
+                    case CellState.SECONDARY:
+                        this.#rowData[y].SECONDARY++;
+                        this.#colData[x].SECONDARY++;
+                }
+            }
+        }
     }
-    get width() {
-        return this.canvas.width;
+    solveFull() {
+        this.initRowAndColData();
     }
-    get height() {
-        return this.canvas.height;
+    oaoSingle() {
+        for (let y = 0; y < this.height; y++) {
+            let row = this.#rowData[y];
+            if (row.PRIMARY + row.SECONDARY == this.width - 1) {
+                let emptyX = -1;
+                for (let x = 0; x < this.width; x++) {
+                    if (this.#game.getCellState({ x: x, y: y }) == CellState.EMPTY) {
+                        emptyX = x;
+                        break;
+                    }
+                }
+                if (row.PRIMARY == this.width / 2) {
+                    return { x: emptyX, y: y, state: CellState.SECONDARY };
+                }
+                else {
+                    return { x: emptyX, y: y, state: CellState.PRIMARY };
+                }
+            }
+        }
+        for (let x = 0; x < this.width; x++) {
+            let col = this.#colData[x];
+            if (col.PRIMARY + col.SECONDARY == this.height - 1) {
+                let emptyY = -1;
+                for (let y = 0; y < this.height; y++) {
+                    if (this.#game.getCellState({ x: x, y: y }) == CellState.EMPTY) {
+                        emptyY = y;
+                        break;
+                    }
+                }
+                if (col.PRIMARY == this.height / 2) {
+                    return { x: x, y: emptyY, state: CellState.SECONDARY };
+                }
+                else {
+                    return { x: x, y: emptyY, state: CellState.PRIMARY };
+                }
+            }
+        }
+    }
+    makeMove(move) {
+        this.#moves.push(move);
+        this.#game.setCellState(move);
     }
     set game(game) {
         this.#game = game;
@@ -203,11 +294,32 @@ class GameInput {
     get game() {
         return this.#game;
     }
-    cellAt(x, y) {
-        return {
-            x: Math.floor((x * this.#game.width) / this.width),
-            y: Math.floor((y * this.#game.height) / this.height)
-        };
+    get width() {
+        return this.#game.width;
+    }
+    get height() {
+        return this.#game.height;
     }
 }
+let gameRenderer;
+let gameInput;
+let game;
+// noinspection JSUnusedGlobalSymbols
+function setup() {
+    game = new Game(8, 8);
+    game.setCellState({ x: 3, y: 3, state: CellState.PRIMARY });
+    gameInput = new GameInput("mainCanvas");
+    gameInput.game = game;
+    gameRenderer = new GameRenderer("mainCanvas");
+    gameRenderer.game = game;
+    gameRenderer.render();
+}
+const Themes = {
+    default: {
+        background: "#A0A0A0",
+        gridlines: "#000000",
+        primary: "#303030",
+        secondary: "#F0F0F0"
+    }
+};
 //# sourceMappingURL=script.js.map
