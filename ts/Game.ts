@@ -13,18 +13,29 @@ class Game extends EventEmitter<GameEvents> {
     #width: number;
     #height: number
     #board: Board;
+    uniqueRowsAndColumns: boolean;
 
     constructor(width, height) {
         super();
         this.#width = width;
         this.#height = height;
         this.#board = [];
+        this.uniqueRowsAndColumns = false;
         for (let y = 0; y < height; y++) {
             this.#board[y] = [];
             for (let x = 0; x < width; x++) {
                 this.#board[y][x] = CellState.EMPTY;
             }
         }
+    }
+
+    reset() {
+        for (let y = 0; y < this.#height; y++) {
+            for (let x = 0; x < this.#width; x++) {
+                this.#board[y][x] = CellState.EMPTY;
+            }
+        }
+        this.emit("boardStateChange");
     }
 
     setCellState(move: Move) {

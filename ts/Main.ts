@@ -6,7 +6,12 @@ let game: Game;
 function setup() {
     game = new Game(8, 8);
 
-    gameInput = new GameInput("mainCanvas");
+    gameInput = new GameInput({
+        canvasId: "mainCanvas",
+        uniqueRowsCheckboxId: "checkbox",
+        solveButtonId: "solveButton",
+        resetButtonId: "resetButton"
+    });
     gameInput.game = game;
 
     gameRenderer = new GameRenderer("mainCanvas");

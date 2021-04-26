@@ -1,13 +1,31 @@
+interface GameInputElements {
+    canvasId: string;
+    uniqueRowsCheckboxId?: string;
+    solveButtonId?: string;
+    resetButtonId?: string;
+}
+
 class GameInput {
     canvas: HTMLCanvasElement;
     #game: Game;
 
-    constructor(canvasId: string) {
-        this.canvas = <HTMLCanvasElement>document.getElementById(canvasId);
+    constructor(ids: GameInputElements) {
+        this.canvas = <HTMLCanvasElement>document.getElementById(ids.canvasId);
         this.canvas.addEventListener("click", this.onPrimary.bind(this));
         this.canvas.addEventListener("contextmenu", this.onCtxMenu.bind(this));
         document.addEventListener("keydown", this.onKeyPress.bind(this));
-
+        if (ids.uniqueRowsCheckboxId) {
+            let checkbox = <HTMLInputElement>document.getElementById(ids.uniqueRowsCheckboxId);
+            checkbox.addEventListener("change", this.onCheckboxChange.bind(this));
+        }
+        if (ids.solveButtonId) {
+            let checkbox = <HTMLButtonElement>document.getElementById(ids.solveButtonId);
+            checkbox.addEventListener("click", this.solve.bind(this));
+        }
+        if (ids.resetButtonId) {
+            let checkbox = <HTMLButtonElement>document.getElementById(ids.resetButtonId);
+            checkbox.addEventListener("click", this.reset.bind(this));
+        }
     }
 
     onPrimary(e: MouseEvent) {
@@ -35,12 +53,26 @@ class GameInput {
         if (!e.repeat) {
             switch (e.key) {
                 case "g":
-                    let gameSolver = new GameSolver();
-                    gameSolver.game = this.#game;
-                    gameSolver.allowDuplicateRows = false;
-                    gameSolver.solveFull();
+                    this.solve();
+                    break;
+                case "r":
+                    this.reset();
             }
         }
+    }
+
+    onCheckboxChange(e: Event) {
+        this.#game.uniqueRowsAndColumns = (<HTMLInputElement>e.target).checked;
+    }
+
+    reset() {
+        this.#game.reset();
+    }
+
+    solve() {
+        let gameSolver = new GameSolver();
+        gameSolver.game = this.#game;
+        gameSolver.solveFull();
     }
 
     get width(): number {

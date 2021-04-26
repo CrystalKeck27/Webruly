@@ -7,7 +7,6 @@ interface SolverMove extends Move {
 class GameSolver {
     #game: Game;
     #moves: SolverMove[];
-    allowDuplicateRows: boolean;
 
     fillGivens() {
         for (let y = 0; y < this.height; y++) {
@@ -123,13 +122,6 @@ class GameSolver {
                 let states: CellState[] = [];
                 for (let x = 0; x < width; x++) {
                     let cs = getCS({x: x, y: y});
-                    if(!self.allowDuplicateRows) {
-                        for (let y2 = y + 1; y2 < height; y2++) {
-                            let cs2 = getCS({x:x, y:y2})
-                            if(cs2 != cs || cs == CellState.EMPTY) {
-                            }
-                        }
-                    }
                     states[x % 3] = cs;
                     if (cs == CellState.PRIMARY) prim++;
                     if (cs == CellState.SECONDARY) sec++;
@@ -146,6 +138,19 @@ class GameSolver {
                 }
                 if (sec > width / 2) {
                     return true;
+                }
+                if(self.uniqueRowsAndColumns) {
+                    for (let y2 = y+1; y2 < height; y2++) {
+                        let isGood = false;
+                        for (let x = 0; x < width; x++) {
+                            let cs = getCS({x:x, y:y});
+                            let cs2 = getCS({x:x, y:y2});
+                            if(cs2 != cs || cs == CellState.EMPTY) {
+                                isGood = true;
+                            }
+                        }
+                        if (!isGood) return true;
+                    }
                 }
             }
             return false;
@@ -185,13 +190,6 @@ class GameSolver {
         }
     }
 
-    latestGuess(): number {
-        for (let i = this.#moves.length - 1; i >= 0; i--) {
-            if(this.#moves[i].isGuess) return i;
-        }
-        return -1;
-    }
-
     switchLatestGuess(): boolean {
         for (let i = this.#moves.length - 1; i >= 0; i--) {
             let move = this.#moves[i];
@@ -229,6 +227,10 @@ class GameSolver {
     makeMove(move: SolverMove) {
         this.#moves.push(move);
         this.#game.setCellState(move);
+    }
+
+    get uniqueRowsAndColumns() {
+        return this.#game.uniqueRowsAndColumns;
     }
 
     set game(game) {

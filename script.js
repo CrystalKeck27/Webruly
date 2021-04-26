@@ -45,6 +45,7 @@ class Game extends EventEmitter {
         this.#width = width;
         this.#height = height;
         this.#board = [];
+        this.uniqueRowsAndColumns = false;
         for (let y = 0; y < height; y++) {
             this.#board[y] = [];
             for (let x = 0; x < width; x++) {
@@ -55,6 +56,14 @@ class Game extends EventEmitter {
     #width;
     #height;
     #board;
+    reset() {
+        for (let y = 0; y < this.#height; y++) {
+            for (let x = 0; x < this.#width; x++) {
+                this.#board[y][x] = CellState.EMPTY;
+            }
+        }
+        this.emit("boardStateChange");
+    }
     setCellState(move) {
         this.#board[move.y][move.x] = move.state;
         this.emit("boardStateChange");
@@ -76,11 +85,23 @@ var CellState;
     CellState[CellState["SECONDARY"] = 2] = "SECONDARY";
 })(CellState || (CellState = {}));
 class GameInput {
-    constructor(canvasId) {
-        this.canvas = document.getElementById(canvasId);
+    constructor(ids) {
+        this.canvas = document.getElementById(ids.canvasId);
         this.canvas.addEventListener("click", this.onPrimary.bind(this));
         this.canvas.addEventListener("contextmenu", this.onCtxMenu.bind(this));
         document.addEventListener("keydown", this.onKeyPress.bind(this));
+        if (ids.uniqueRowsCheckboxId) {
+            let checkbox = document.getElementById(ids.uniqueRowsCheckboxId);
+            checkbox.addEventListener("change", this.onCheckboxChange.bind(this));
+        }
+        if (ids.solveButtonId) {
+            let checkbox = document.getElementById(ids.solveButtonId);
+            checkbox.addEventListener("click", this.solve.bind(this));
+        }
+        if (ids.resetButtonId) {
+            let checkbox = document.getElementById(ids.resetButtonId);
+            checkbox.addEventListener("click", this.reset.bind(this));
+        }
     }
     #game;
     onPrimary(e) {
@@ -105,12 +126,23 @@ class GameInput {
         if (!e.repeat) {
             switch (e.key) {
                 case "g":
-                    let gameSolver = new GameSolver();
-                    gameSolver.game = this.#game;
-                    gameSolver.allowDuplicateRows = false;
-                    gameSolver.solveFull();
+                    this.solve();
+                    break;
+                case "r":
+                    this.reset();
             }
         }
+    }
+    onCheckboxChange(e) {
+        this.#game.uniqueRowsAndColumns = e.target.checked;
+    }
+    reset() {
+        this.#game.reset();
+    }
+    solve() {
+        let gameSolver = new GameSolver();
+        gameSolver.game = this.#game;
+        gameSolver.solveFull();
     }
     get width() {
         return this.canvas.width;
@@ -334,17 +366,8 @@ class GameSolver {
                 let prim = 0;
                 let sec = 0;
                 let states = [];
-                let isGood = false;
                 for (let x = 0; x < width; x++) {
                     let cs = getCS({ x: x, y: y });
-                    if (!self.allowDuplicateRows) {
-                        for (let y2 = y + 1; y2 < height; y2++) {
-                            let cs2 = getCS({ x: x, y: y2 });
-                            if (cs2 != cs || cs == CellState.EMPTY) {
-                                isGood = true;
-                            }
-                        }
-                    }
                     states[x % 3] = cs;
                     if (cs == CellState.PRIMARY)
                         prim++;
@@ -358,14 +381,25 @@ class GameSolver {
                         }
                     }
                 }
-                if (!isGood && !self.allowDuplicateRows) {
-                    return true;
-                }
                 if (prim > width / 2) {
                     return true;
                 }
                 if (sec > width / 2) {
                     return true;
+                }
+                if (self.uniqueRowsAndColumns) {
+                    for (let y2 = y + 1; y2 < height; y2++) {
+                        let isGood = false;
+                        for (let x = 0; x < width; x++) {
+                            let cs = getCS({ x: x, y: y });
+                            let cs2 = getCS({ x: x, y: y2 });
+                            if (cs2 != cs || cs == CellState.EMPTY) {
+                                isGood = true;
+                            }
+                        }
+                        if (!isGood)
+                            return true;
+                    }
                 }
             }
             return false;
@@ -401,13 +435,6 @@ class GameSolver {
                 }
             }
         }
-    }
-    latestGuess() {
-        for (let i = this.#moves.length - 1; i >= 0; i--) {
-            if (this.#moves[i].isGuess)
-                return i;
-        }
-        return -1;
     }
     switchLatestGuess() {
         for (let i = this.#moves.length - 1; i >= 0; i--) {
@@ -445,6 +472,9 @@ class GameSolver {
         this.#moves.push(move);
         this.#game.setCellState(move);
     }
+    get uniqueRowsAndColumns() {
+        return this.#game.uniqueRowsAndColumns;
+    }
     set game(game) {
         this.#game = game;
     }
@@ -464,7 +494,12 @@ let game;
 // noinspection JSUnusedGlobalSymbols
 function setup() {
     game = new Game(8, 8);
-    gameInput = new GameInput("mainCanvas");
+    gameInput = new GameInput({
+        canvasId: "mainCanvas",
+        uniqueRowsCheckboxId: "checkbox",
+        solveButtonId: "solveButton",
+        resetButtonId: "resetButton"
+    });
     gameInput.game = game;
     gameRenderer = new GameRenderer("mainCanvas");
     gameRenderer.game = game;
